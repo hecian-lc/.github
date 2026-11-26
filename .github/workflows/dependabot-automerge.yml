@@ -62,9 +62,11 @@ jobs:
 
           # Grupos ("Bump the menores-npm group…"): Dependabot los arma solo con
           # parches y menores si así está en dependabot.yml; se fusionan.
-          if [[ "$titulo" =~ the\ .+\ group ]]; then
+          re_grupo='the .+ group'
+          re_bump='[Bb]ump ([^ ]+) from v?([0-9]+)\.([0-9]+)[^ ]* to v?([0-9]+)\.([0-9]+)'
+          if [[ "$titulo" =~ $re_grupo ]]; then
             ok=1
-          elif [[ "$titulo" =~ [Bb]ump\ ([^ ]+)\ from\ v?([0-9]+)\.([0-9]+)[^ ]*\ to\ v?([0-9]+)\.([0-9]+) ]]; then
+          elif [[ "$titulo" =~ $re_bump ]]; then
             paq="${BASH_REMATCH[1]}"; a1="${BASH_REMATCH[2]}"; a2="${BASH_REMATCH[3]}"; b1="${BASH_REMATCH[4]}"; b2="${BASH_REMATCH[5]}"
             if grep -qxF "$paq" <<<"$EXCLUIR"; then echo "#$num: $paq se revisa a mano"; exit 0; fi
             if [ "$a1" != "$b1" ]; then ok=0
