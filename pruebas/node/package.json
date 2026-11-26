@@ -1,0 +1,12 @@
+{
+  "name": "prueba-ci-node",
+  "version": "1.0.0",
+  "private": true,
+  "license": "UNLICENSED",
+  "author": "HECIAN LC",
+  "scripts": {
+    "lint": "node -e \"process.exit(0)\"",
+    "build": "node -e \"console.log('build ok')\"",
+    "test": "node --test"
+  }
+}

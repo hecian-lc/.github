@@ -1,0 +1,103 @@
+# Controles de seguridad (reutilizable).
+#
+#   jobs:
+#     seguridad:
+#       uses: hecian-lc/.github/.github/workflows/seguridad.yml@v1
+#       with:
+#         auditar_npm: |
+#           backend
+#           portal
+#
+# - gitleaks sobre TODO el historial (bloqueante). Se baja el binario fijado y
+#   se verifica su sha256: es un control de seguridad, no ejecuta nada sin
+#   comprobar. La action gitleaks/gitleaks-action solo mira el rango del push
+#   y en el merge de un PR llegó a escanear 0 commits (analisis-de-redes).
+# - npm audit de dependencias de producción, high o critical (bloqueante),
+#   en las carpetas que se indiquen.
+# - semgrep en modo reporte, opcional (no bloquea, sube el resultado).
+name: Seguridad
+
+on:
+  workflow_call:
+    inputs:
+      runner:
+        type: string
+        default: ubuntu-latest
+      auditar_npm:
+        description: Carpetas con package-lock.json para npm audit, una por línea
+        type: string
+        default: ''
+      semgrep:
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+jobs:
+  secretos:
+    name: Secretos (gitleaks)
+    runs-on: ${{ inputs.runner }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - name: gitleaks (historial completo)
+        env:
+          GITLEAKS_VERSION: 8.24.3
+          GITLEAKS_SHA256: 9991e0b2903da4c8f6122b5c3186448b927a5da4deef1fe45271c3793f4ee29c
+        run: |
+          set -euo pipefail
+          curl -sSfL -o "$RUNNER_TEMP/gitleaks.tar.gz" \
+            "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz"
+          echo "${GITLEAKS_SHA256}  $RUNNER_TEMP/gitleaks.tar.gz" | sha256sum -c -
+          tar -xzf "$RUNNER_TEMP/gitleaks.tar.gz" -C "$RUNNER_TEMP" gitleaks
+          "$RUNNER_TEMP/gitleaks" detect --source . --redact --no-banner \
+            --log-opts=--all --exit-code 1 \
+            --report-format sarif --report-path gitleaks.sarif
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: gitleaks
+          path: gitleaks.sarif
+          if-no-files-found: ignore
+
+  dependencias:
+    name: Dependencias (npm audit)
+    if: inputs.auditar_npm != ''
+    runs-on: ${{ inputs.runner }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+      - name: npm audit (producción, high+)
+        env:
+          CARPETAS: ${{ inputs.auditar_npm }}
+        run: |
+          set -euo pipefail
+          falla=0
+          while IFS= read -r d; do
+            d="${d//[[:space:]]/}"; [ -n "$d" ] || continue
+            echo "::group::$d"
+            ( cd "$d" && npm audit --package-lock-only --omit=dev --audit-level=high ) || falla=1
+            echo "::endgroup::"
+          done <<< "$CARPETAS"
+          exit $falla
+
+  semgrep:
+    name: Análisis estático (semgrep, reporte)
+    if: inputs.semgrep
+    runs-on: ${{ inputs.runner }}
+    steps:
+      - uses: actions/checkout@v7
+      - name: semgrep
+        run: |
+          python3 -m venv "$RUNNER_TEMP/semgrep"
+          "$RUNNER_TEMP/semgrep/bin/pip" install --quiet semgrep
+          "$RUNNER_TEMP/semgrep/bin/semgrep" scan --config auto --json --output semgrep.json || true
+      - uses: actions/upload-artifact@v7
+        with:
+          name: semgrep
+          path: semgrep.json
+          if-no-files-found: warn

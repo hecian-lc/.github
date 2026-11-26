@@ -1,0 +1,23 @@
+name: Mejora
+description: Una función nueva o un cambio en una existente
+labels: [mejora]
+body:
+  - type: textarea
+    id: problema
+    attributes:
+      label: Qué problema resuelve
+      description: Quién lo necesita y qué hace hoy sin esto.
+    validations:
+      required: true
+  - type: textarea
+    id: propuesta
+    attributes:
+      label: Propuesta
+      description: Cómo te imaginás que funcione.
+    validations:
+      required: true
+  - type: textarea
+    id: criterio
+    attributes:
+      label: Cómo sabemos que está listo
+      placeholder: "- El operador puede …"

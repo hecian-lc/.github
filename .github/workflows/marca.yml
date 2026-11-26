@@ -1,0 +1,62 @@
+# Control de marca y licencia (reutilizable). Revisa el estándar de
+# hecian-lc/marca (plantillas/ESTANDAR.md):
+#   - LICENSE propietaria a nombre de HECIAN LC;
+#   - todo package.json con "license": "UNLICENSED" y "private": true;
+#   - firma de HECIAN LC al principio del README;
+#   - SECURITY.md (puede venir del repo .github de la organización).
+#
+#   jobs:
+#     marca:
+#       uses: hecian-lc/.github/.github/workflows/marca.yml@v1
+#       with:
+#         estricto: true
+#
+# Con estricto: false (por defecto) solo avisa, para repos que todavía no
+# pasaron a la marca. Con estricto: true, lo que falta hace fallar el job.
+name: Marca y licencia
+
+on:
+  workflow_call:
+    inputs:
+      estricto:
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+jobs:
+  marca:
+    name: Marca y licencia
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: Revisar
+        env:
+          ESTRICTO: ${{ inputs.estricto }}
+        run: |
+          nivel=warning; [ "$ESTRICTO" = true ] && nivel=error
+          faltas=0
+          falta() { echo "::$nivel::$1"; faltas=$((faltas+1)); }
+
+          if [ ! -f LICENSE ]; then
+            falta "Falta LICENSE (plantilla: hecian-lc/marca, plantillas/LICENSE)"
+          elif ! grep -q "HECIAN LC" LICENSE; then
+            falta "LICENSE no está a nombre de HECIAN LC"
+          fi
+
+          while IFS= read -r p; do
+            lic=$(node -p "require('./$p').license || ''")
+            priv=$(node -p "String(require('./$p').private === true)")
+            [ "$lic" = UNLICENSED ] || falta "$p: \"license\" tiene que ser \"UNLICENSED\" (hoy: \"$lic\")"
+            [ "$priv" = true ] || falta "$p: falta \"private\": true"
+          done < <(git ls-files '*package.json' | grep -v node_modules)
+
+          if [ -f README.md ]; then
+            head -n 12 README.md | grep -q 'hecian-lc_' || falta "README.md: falta la firma de HECIAN LC al principio (hecian-lc/marca, badges/README.md)"
+          else
+            falta "Falta README.md"
+          fi
+
+          echo "Faltas: $faltas"
+          if [ "$ESTRICTO" = true ] && [ "$faltas" -gt 0 ]; then exit 1; fi

@@ -1,0 +1,38 @@
+name: Falla
+description: Algo no funciona como debería
+labels: [falla]
+body:
+  - type: textarea
+    id: que-pasa
+    attributes:
+      label: Qué pasa
+      description: Qué hiciste, qué esperabas y qué pasó.
+    validations:
+      required: true
+  - type: textarea
+    id: pasos
+    attributes:
+      label: Cómo reproducirlo
+      placeholder: |
+        1. Entrar a …
+        2. Tocar …
+        3. Aparece …
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Versión
+      description: La que figura en «Acerca de» o en el pie de la app.
+    validations:
+      required: true
+  - type: input
+    id: instalacion
+    attributes:
+      label: Dónde
+      description: Planta, cliente o servidor (nube, on-premise, celular…).
+  - type: textarea
+    id: evidencia
+    attributes:
+      label: Capturas o registros
+      description: Arrastrá capturas o pegá el log. No pegues contraseñas ni tokens.

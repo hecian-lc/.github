@@ -1,0 +1,6 @@
+{
+  "name": "CI HECIAN LC",
+  "description": "Tests, seguridad (gitleaks y npm audit) y control de marca y licencia, con los workflows reutilizables de hecian-lc/.github.",
+  "iconName": "hecian-ci",
+  "categories": ["JavaScript", "TypeScript", "Node"]
+}

@@ -1,0 +1,81 @@
+# Fusiona solos los PR de Dependabot de parches y menores cuando la CI pasó
+# (reutilizable). Sale de weg-scada. Corre después de la CI (workflow_run), en
+# el contexto de la rama principal: nunca ejecuta código del PR.
+#
+# En el repo:
+#   name: Dependabot auto-merge
+#   on:
+#     workflow_run:
+#       workflows: [CI]
+#       types: [completed]
+#   jobs:
+#     fusionar:
+#       uses: hecian-lc/.github/.github/workflows/dependabot-automerge.yml@v1
+#       permissions:
+#         contents: write
+#         pull-requests: write
+#
+# Regla: "Bump X from A to B" se fusiona si A y B tienen la misma versión
+# mayor (o, en 0.x, la misma menor). Los mayores quedan para revisión. Los
+# paquetes de `excluir` nunca se fusionan solos.
+name: Dependabot auto-merge
+
+on:
+  workflow_call:
+    inputs:
+      excluir:
+        description: Paquetes que siempre se revisan a mano, uno por línea
+        type: string
+        default: ''
+      metodo:
+        description: merge, squash o rebase
+        type: string
+        default: squash
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  fusionar:
+    name: Fusionar si es parche o menor
+    if: >-
+      github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.event == 'pull_request' &&
+      github.event.workflow_run.actor.login == 'dependabot[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Decidir y fusionar
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          RAMA: ${{ github.event.workflow_run.head_branch }}
+          SHA: ${{ github.event.workflow_run.head_sha }}
+          EXCLUIR: ${{ inputs.excluir }}
+          METODO: ${{ inputs.metodo }}
+        run: |
+          set -euo pipefail
+          pr=$(gh pr list -R "$REPO" --head "$RAMA" --author app/dependabot --state open --json number,headRefOid,title --jq '.[0] // empty')
+          [ -n "$pr" ] || { echo "Sin PR abierto de Dependabot para $RAMA"; exit 0; }
+          num=$(jq -r .number <<<"$pr"); titulo=$(jq -r .title <<<"$pr")
+          [ "$(jq -r .headRefOid <<<"$pr")" = "$SHA" ] || { echo "#$num cambió después de esta CI"; exit 0; }
+
+          # Grupos ("Bump the menores-npm group…"): Dependabot los arma solo con
+          # parches y menores si así está en dependabot.yml; se fusionan.
+          if [[ "$titulo" =~ the\ .+\ group ]]; then
+            ok=1
+          elif [[ "$titulo" =~ [Bb]ump\ ([^ ]+)\ from\ v?([0-9]+)\.([0-9]+)[^ ]*\ to\ v?([0-9]+)\.([0-9]+) ]]; then
+            paq="${BASH_REMATCH[1]}"; a1="${BASH_REMATCH[2]}"; a2="${BASH_REMATCH[3]}"; b1="${BASH_REMATCH[4]}"; b2="${BASH_REMATCH[5]}"
+            if grep -qxF "$paq" <<<"$EXCLUIR"; then echo "#$num: $paq se revisa a mano"; exit 0; fi
+            if [ "$a1" != "$b1" ]; then ok=0
+            elif [ "$a1" = 0 ] && [ "$a2" != "$b2" ]; then ok=0
+            else ok=1; fi
+          else
+            echo "#$num: no entiendo el título, queda para revisión: $titulo"; exit 0
+          fi
+
+          if [ "$ok" = 1 ]; then
+            gh pr merge "$num" -R "$REPO" "--$METODO" --match-head-commit "$SHA"
+          else
+            echo "#$num es un cambio mayor: queda para revisión"
+          fi

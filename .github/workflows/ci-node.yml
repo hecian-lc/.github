@@ -1,0 +1,88 @@
+# CI para proyectos Node (reutilizable).
+#
+# Uso desde un repo:
+#   jobs:
+#     portal:
+#       uses: hecian-lc/.github/.github/workflows/ci-node.yml@v1
+#       with:
+#         directorio: portal-react
+#         runner: ${{ vars.CI_RUNNER || 'ubuntu-latest' }}
+#
+# Instala con `npm ci` y corre lint, build y tests si el package.json los
+# tiene. El script de tests que npm crea por defecto ("no test specified")
+# cuenta como "sin tests", no como falla.
+name: CI Node
+
+on:
+  workflow_call:
+    inputs:
+      directorio:
+        description: Carpeta con el package.json
+        type: string
+        default: .
+      node:
+        description: Versión de Node
+        type: string
+        default: '22'
+      runner:
+        description: Runner (pasar vars.CI_RUNNER si el repo usa uno propio)
+        type: string
+        default: ubuntu-latest
+      lint:
+        type: boolean
+        default: true
+      build:
+        type: boolean
+        default: true
+      tests:
+        type: boolean
+        default: true
+      comando_tests:
+        description: Comando de tests propio (por defecto, npm test)
+        type: string
+        default: ''
+
+permissions:
+  contents: read
+
+jobs:
+  ci:
+    name: ${{ inputs.directorio == '.' && 'node' || inputs.directorio }}
+    runs-on: ${{ inputs.runner }}
+    defaults:
+      run:
+        working-directory: ${{ inputs.directorio }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: ${{ inputs.node }}
+          cache: npm
+          cache-dependency-path: ${{ inputs.directorio }}/package-lock.json
+
+      - name: Instalar
+        run: npm ci --no-audit --no-fund
+
+      - name: Lint
+        if: inputs.lint
+        run: npm run lint --if-present
+
+      - name: Build
+        if: inputs.build
+        run: npm run build --if-present
+
+      - name: Tests
+        if: inputs.tests
+        env:
+          COMANDO: ${{ inputs.comando_tests }}
+        run: |
+          if [ -n "$COMANDO" ]; then
+            bash -c "$COMANDO"
+            exit
+          fi
+          t=$(node -p "(require('./package.json').scripts || {}).test || ''")
+          case "$t" in
+            ''|*'no test specified'*) echo "::notice::$PWD no tiene tests"; exit 0 ;;
+          esac
+          npm test

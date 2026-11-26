@@ -1,0 +1,72 @@
+# CI para proyectos Python (reutilizable).
+#
+#   jobs:
+#     python:
+#       uses: hecian-lc/.github/.github/workflows/ci-python.yml@v1
+#       with:
+#         directorio: .
+#
+# Instala desde requirements.txt o pyproject.toml, corre ruff si el proyecto
+# lo configura y pytest si hay tests.
+name: CI Python
+
+on:
+  workflow_call:
+    inputs:
+      directorio:
+        type: string
+        default: .
+      python:
+        type: string
+        default: '3.12'
+      runner:
+        type: string
+        default: ubuntu-latest
+      comando_tests:
+        description: Comando de tests propio (por defecto, pytest -q)
+        type: string
+        default: ''
+
+permissions:
+  contents: read
+
+jobs:
+  ci:
+    name: ${{ inputs.directorio == '.' && 'python' || inputs.directorio }}
+    runs-on: ${{ inputs.runner }}
+    defaults:
+      run:
+        working-directory: ${{ inputs.directorio }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: ${{ inputs.python }}
+
+      - name: Instalar
+        run: |
+          python -m pip install --upgrade pip
+          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+          if [ -f requirements-dev.txt ]; then pip install -r requirements-dev.txt; fi
+          if [ -f pyproject.toml ]; then pip install -e ".[dev]" 2>/dev/null || pip install -e .; fi
+          pip install pytest ruff
+
+      - name: Lint (ruff)
+        run: |
+          if [ -f ruff.toml ] || [ -f .ruff.toml ] || grep -qs '^\[tool\.ruff' pyproject.toml; then
+            ruff check .
+          else
+            echo "::notice::sin configuración de ruff, no se corre el lint"
+          fi
+
+      - name: Tests
+        env:
+          COMANDO: ${{ inputs.comando_tests }}
+        run: |
+          if [ -n "$COMANDO" ]; then bash -c "$COMANDO"; exit; fi
+          if [ -d tests ] || compgen -G "test_*.py" >/dev/null || compgen -G "**/test_*.py" >/dev/null; then
+            pytest -q
+          else
+            echo "::notice::$PWD no tiene tests"
+          fi

@@ -1,0 +1,30 @@
+# CI estándar de HECIAN LC: tests, seguridad y marca.
+# Ajustá `directorio` (y sumá un job por carpeta si el repo tiene varias).
+name: CI
+
+on:
+  push:
+    branches: [$default-branch]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  node:
+    uses: hecian-lc/.github/.github/workflows/ci-node.yml@v1
+    with:
+      directorio: .
+      runner: ${{ vars.CI_RUNNER || 'ubuntu-latest' }}
+
+  seguridad:
+    uses: hecian-lc/.github/.github/workflows/seguridad.yml@v1
+    with:
+      runner: ${{ vars.CI_RUNNER || 'ubuntu-latest' }}
+      auditar_npm: .
+
+  marca:
+    uses: hecian-lc/.github/.github/workflows/marca.yml@v1
+    with:
+      estricto: true
