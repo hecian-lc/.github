@@ -22,7 +22,7 @@ Se llaman desde cualquier repo de la organización con `uses: hecian-lc/.github/
 | [`marca.yml`](.github/workflows/marca.yml) | Licencia propietaria, `package.json` con `UNLICENSED` y `private`, firma en el README. Con `estricto: false` solo avisa |
 | [`dependabot-automerge.yml`](.github/workflows/dependabot-automerge.yml) | Fusiona los PR de Dependabot de parches y menores cuando la CI pasó; los mayores quedan para revisión |
 
-Para los repos que usan un runner propio, pasar `runner: ${{ vars.CI_RUNNER || 'ubuntu-latest' }}`.
+Los trabajos corren en el runner que diga la variable `CI_RUNNER` del repo que llama o de la organización (la de la organización vale solo para los repos privados: `ci-propio`, la VM `ci-runner`). Sin variable, en `ubuntu-latest`. Los públicos se quedan en los runners de GitHub, que para ellos son gratis, y así un PR desde un fork no ejecuta código en la máquina propia. Para forzar uno, pasar `runner:`.
 
 ### Versiones
 

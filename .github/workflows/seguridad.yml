@@ -21,8 +21,9 @@ on:
   workflow_call:
     inputs:
       runner:
+        description: 'Runner. Vacío: vars.CI_RUNNER del repo u organización que llama, o ubuntu-latest'
         type: string
-        default: ubuntu-latest
+        default: ''
       auditar_npm:
         description: Carpetas con package-lock.json para npm audit, una por línea
         type: string
@@ -37,7 +38,7 @@ permissions:
 jobs:
   secretos:
     name: Secretos (gitleaks)
-    runs-on: ${{ inputs.runner }}
+    runs-on: ${{ inputs.runner || vars.CI_RUNNER || 'ubuntu-latest' }}
     steps:
       - uses: actions/checkout@v7
         with:
@@ -65,7 +66,7 @@ jobs:
   dependencias:
     name: Dependencias (npm audit)
     if: inputs.auditar_npm != ''
-    runs-on: ${{ inputs.runner }}
+    runs-on: ${{ inputs.runner || vars.CI_RUNNER || 'ubuntu-latest' }}
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
@@ -88,7 +89,7 @@ jobs:
   semgrep:
     name: Análisis estático (semgrep, reporte)
     if: inputs.semgrep
-    runs-on: ${{ inputs.runner }}
+    runs-on: ${{ inputs.runner || vars.CI_RUNNER || 'ubuntu-latest' }}
     steps:
       - uses: actions/checkout@v7
       - name: semgrep

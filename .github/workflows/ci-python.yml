@@ -20,8 +20,9 @@ on:
         type: string
         default: '3.12'
       runner:
+        description: 'Runner. Vacío: vars.CI_RUNNER del repo u organización que llama, o ubuntu-latest'
         type: string
-        default: ubuntu-latest
+        default: ''
       comando_tests:
         description: Comando de tests propio (por defecto, pytest -q)
         type: string
@@ -33,7 +34,7 @@ permissions:
 jobs:
   ci:
     name: ${{ inputs.directorio == '.' && 'python' || inputs.directorio }}
-    runs-on: ${{ inputs.runner }}
+    runs-on: ${{ inputs.runner || vars.CI_RUNNER || 'ubuntu-latest' }}
     defaults:
       run:
         working-directory: ${{ inputs.directorio }}

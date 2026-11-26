@@ -6,7 +6,6 @@
 #       uses: hecian-lc/.github/.github/workflows/ci-node.yml@v1
 #       with:
 #         directorio: portal-react
-#         runner: ${{ vars.CI_RUNNER || 'ubuntu-latest' }}
 #
 # Instala con `npm ci` y corre lint, build y tests si el package.json los
 # tiene. El script de tests que npm crea por defecto ("no test specified")
@@ -25,9 +24,9 @@ on:
         type: string
         default: '22'
       runner:
-        description: Runner (pasar vars.CI_RUNNER si el repo usa uno propio)
+        description: 'Runner. Vacío: vars.CI_RUNNER del repo u organización que llama, o ubuntu-latest'
         type: string
-        default: ubuntu-latest
+        default: ''
       lint:
         type: boolean
         default: true
@@ -52,7 +51,7 @@ permissions:
 jobs:
   ci:
     name: ${{ inputs.directorio == '.' && 'node' || inputs.directorio }}
-    runs-on: ${{ inputs.runner }}
+    runs-on: ${{ inputs.runner || vars.CI_RUNNER || 'ubuntu-latest' }}
     defaults:
       run:
         working-directory: ${{ inputs.directorio }}
