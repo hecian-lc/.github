@@ -41,6 +41,10 @@ on:
         description: Comando de tests propio (por defecto, npm test)
         type: string
         default: ''
+      entorno:
+        description: 'Variables de entorno, una por línea (NOMBRE=valor). Ej.: PUPPETEER_SKIP_DOWNLOAD=true'
+        type: string
+        default: ''
 
 permissions:
   contents: read
@@ -54,6 +58,18 @@ jobs:
         working-directory: ${{ inputs.directorio }}
     steps:
       - uses: actions/checkout@v7
+
+      - name: Variables de entorno
+        if: inputs.entorno != ''
+        env:
+          ENTORNO: ${{ inputs.entorno }}
+        run: |
+          while IFS= read -r linea; do
+            linea="${linea#"${linea%%[![:space:]]*}"}"
+            [ -z "$linea" ] && continue
+            [[ "$linea" == *=* ]] || { echo "::error::'$linea' no tiene la forma NOMBRE=valor"; exit 1; }
+            echo "$linea" >> "$GITHUB_ENV"
+          done <<< "$ENTORNO"
 
       - uses: actions/setup-node@v7
         with:

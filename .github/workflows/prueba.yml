@@ -23,6 +23,9 @@ jobs:
     uses: ./.github/workflows/ci-node.yml
     with:
       directorio: pruebas/node
+      entorno: |
+        PRUEBA_ENTORNO=ok
+      comando_tests: test "$PRUEBA_ENTORNO" = ok && node --test
 
   marca-ejemplo:
     name: marca (aviso)

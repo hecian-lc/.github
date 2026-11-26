@@ -2,8 +2,8 @@
 # hecian-lc/marca (plantillas/ESTANDAR.md):
 #   - LICENSE propietaria a nombre de HECIAN LC;
 #   - todo package.json con "license": "UNLICENSED" y "private": true;
-#   - firma de HECIAN LC al principio del README;
-#   - SECURITY.md (puede venir del repo .github de la organización).
+#   - firma de HECIAN LC al principio del README.
+# SECURITY.md no se revisa: si el repo no tiene uno, vale el de hecian-lc/.github.
 #
 #   jobs:
 #     marca:
