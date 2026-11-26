@@ -39,10 +39,12 @@ jobs:
           faltas=0
           falta() { echo "::$nivel::$1"; faltas=$((faltas+1)); }
 
-          if [ ! -f LICENSE ]; then
+          lic_archivo=""
+          for f in LICENSE LICENSE.md LICENSE.txt; do [ -f "$f" ] && { lic_archivo="$f"; break; }; done
+          if [ -z "$lic_archivo" ]; then
             falta "Falta LICENSE (plantilla: hecian-lc/marca, plantillas/LICENSE)"
-          elif ! grep -q "HECIAN LC" LICENSE; then
-            falta "LICENSE no está a nombre de HECIAN LC"
+          elif ! grep -q "HECIAN LC" "$lic_archivo"; then
+            falta "$lic_archivo no está a nombre de HECIAN LC"
           fi
 
           while IFS= read -r p; do
