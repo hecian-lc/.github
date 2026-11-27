@@ -10,6 +10,7 @@
 #       uses: hecian-lc/.github/.github/workflows/marca.yml@v1
 #       with:
 #         estricto: true
+#         runner: ${{ vars.CI_RUNNER || 'ubuntu-latest' }}
 #
 # Con estricto: false (por defecto) solo avisa, para repos que todavía no
 # pasaron a la marca. Con estricto: true, lo que falta hace fallar el job.
@@ -21,6 +22,10 @@ on:
       estricto:
         type: boolean
         default: false
+      runner:
+        description: Runner (pasar vars.CI_RUNNER si el repo usa uno propio)
+        type: string
+        default: ubuntu-latest
 
 permissions:
   contents: read
@@ -28,7 +33,7 @@ permissions:
 jobs:
   marca:
     name: Marca y licencia
-    runs-on: ubuntu-latest
+    runs-on: ${{ inputs.runner }}
     steps:
       - uses: actions/checkout@v7
       - name: Revisar
