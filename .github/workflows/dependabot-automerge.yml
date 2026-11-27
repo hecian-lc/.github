@@ -43,7 +43,9 @@ jobs:
       github.event.workflow_run.conclusion == 'success' &&
       github.event.workflow_run.event == 'pull_request' &&
       github.event.workflow_run.actor.login == 'dependabot[bot]'
-    runs-on: ubuntu-latest
+    # vars es del repo que llama: en los privados corre en el runner propio
+    # (CI_RUNNER); en los públicos, en GitHub (gratis).
+    runs-on: ${{ vars.CI_RUNNER || 'ubuntu-latest' }}
     steps:
       - name: Decidir y fusionar
         env:
